@@ -51,6 +51,18 @@ export const bookCasts: BookCast[] = [
         roleDescription: "The young narrator of the story who learns about racial injustice.",
     },
     {
+        bookId: 1,
+        authorName: "Truman Capote",
+        roleName: "Atticus Finch",
+        roleDescription: "Scout's father, a lawyer who defends a black man accused of raping a white woman.",
+    },
+    {
+        bookId: 1,
+        authorName: "Nelle Harper",
+        roleName: "Tom Robinson",
+        roleDescription: "A black man who is falsely accused of raping a white woman.",
+    },
+    {
         bookId: 2,
         authorName: "George Orwell",
         roleName: "Winston Smith",
