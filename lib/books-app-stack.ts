@@ -7,10 +7,18 @@ import * as custom from "aws-cdk-lib/custom-resources";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { books, bookCasts } from "../seed/books";
 import { generateBatch } from "../shared/util";
+import * as cognito from "aws-cdk-lib/aws-cognito";
 
 export class BooksAppStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
+
+        // Create a Cognito User Pool for authentication
+        const userPool = new cognito.UserPool(this, "UserPool", {
+            signInAliases: { email: true }, // allow sign in with email
+            selfSignUpEnabled: true,
+            removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev/test
+        });
 
         // Create a DynamoDB table for storing books
         const booksTable = new dynamodb.Table(this, "BooksTable", {
@@ -98,10 +106,28 @@ export class BooksAppStack extends cdk.Stack {
         // API Gateway resources and methods
         const booksResource = api.root.addResource("books");
         booksResource.addMethod("GET", new apigateway.LambdaIntegration(getAllBooksFn));
-        booksResource.addMethod("POST", new apigateway.LambdaIntegration(addBookFn));
+        booksResource.addMethod("POST", new apigateway.LambdaIntegration(addBookFn), {
+            authorizer: new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
+                cognitoUserPools: [userPool],
+            }),
+        });
+
+        const deleteBookFn = new lambdanode.NodejsFunction(this, "DeleteBookFn", {
+            architecture: lambda.Architecture.ARM_64,
+            runtime: lambda.Runtime.NODEJS_18_X,
+            entry: `${__dirname}/../lambda/deleteBook.ts`,
+            environment: {
+                TABLE_NAME: booksTable.tableName,
+                REGION: "eu-west-1",
+            },
+        });
+        booksTable.grantReadWriteData(deleteBookFn); // Grant permissions for the delete function
+
+
 
         const bookResource = booksResource.addResource("{id}");
         bookResource.addMethod("GET", new apigateway.LambdaIntegration(getBookByIdFn));
+        bookResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteBookFn));
 
         // Expose getBookCastMembersFn with a URL
         const getBookCastMembersURL = getBookCastMembersFn.addFunctionUrl({
