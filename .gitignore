@@ -9,3 +9,6 @@ cdk.out
 
 .DS_Store
 *.schema.json
+
+# Ignore response file from Lambda testing
+response.json
