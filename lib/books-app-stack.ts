@@ -20,6 +20,7 @@ export class BooksAppStack extends cdk.Stack {
             tableName: "Books",
         });
 
+        // Create a DynamoDB table for book casts
         const bookCastsTable = new dynamodb.Table(this, "BookCastTable", {
             billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
             partitionKey: { name: "bookId", type: dynamodb.AttributeType.NUMBER },
@@ -27,12 +28,12 @@ export class BooksAppStack extends cdk.Stack {
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             tableName: "BookCast",
         });
-        
+
+        // Local secondary index for bookCastsTable
         bookCastsTable.addLocalSecondaryIndex({
             indexName: "roleIx",
             sortKey: { name: "roleName", type: dynamodb.AttributeType.STRING },
         });
-        
 
         // Lambda to get a single book by id
         const getBookByIdFn = new lambdanode.NodejsFunction(this, "GetBookByIdFn", {
@@ -58,19 +59,19 @@ export class BooksAppStack extends cdk.Stack {
         });
         booksTable.grantReadData(getAllBooksFn);
 
-        // API Gateway setup
-        const api = new apigateway.RestApi(this, "BooksApi", {
-            restApiName: "Books Service",
-            description: "API for managing books in DynamoDB.",
+        // Lambda to add a new book
+        const addBookFn = new lambdanode.NodejsFunction(this, "AddBookFn", {
+            architecture: lambda.Architecture.ARM_64,
+            runtime: lambda.Runtime.NODEJS_18_X,
+            entry: `${__dirname}/../lambda/addBook.ts`,
+            environment: {
+                TABLE_NAME: booksTable.tableName,
+                REGION: "eu-west-1",
+            },
         });
+        booksTable.grantReadWriteData(addBookFn);
 
-        // API Gateway resources and methods
-        const booksResource = api.root.addResource("books");
-        booksResource.addMethod("GET", new apigateway.LambdaIntegration(getAllBooksFn));
-
-        const bookResource = booksResource.addResource("{id}");
-        bookResource.addMethod("GET", new apigateway.LambdaIntegration(getBookByIdFn));
-
+        // Lambda to get book cast members
         const getBookCastMembersFn = new lambdanode.NodejsFunction(this, "GetBookCastMemberFn", {
             architecture: lambda.Architecture.ARM_64,
             runtime: lambda.Runtime.NODEJS_18_X,
@@ -81,22 +82,41 @@ export class BooksAppStack extends cdk.Stack {
                 REGION: "eu-west-1",
             },
         });
-        
+        bookCastsTable.grantReadData(getBookCastMembersFn);
+
+        // API Gateway setup
+        const api = new apigateway.RestApi(this, "BooksApi", {
+            restApiName: "Books Service",
+            description: "API for managing books in DynamoDB.",
+            defaultCorsPreflightOptions: {
+                allowHeaders: ["Content-Type", "X-Amz-Date"],
+                allowMethods: ["OPTIONS", "GET", "POST"],
+                allowOrigins: ["*"],
+            },
+        });
+
+        // API Gateway resources and methods
+        const booksResource = api.root.addResource("books");
+        booksResource.addMethod("GET", new apigateway.LambdaIntegration(getAllBooksFn));
+        booksResource.addMethod("POST", new apigateway.LambdaIntegration(addBookFn));
+
+        const bookResource = booksResource.addResource("{id}");
+        bookResource.addMethod("GET", new apigateway.LambdaIntegration(getBookByIdFn));
+
+        // Expose getBookCastMembersFn with a URL
         const getBookCastMembersURL = getBookCastMembersFn.addFunctionUrl({
             authType: lambda.FunctionUrlAuthType.NONE,
             cors: {
                 allowedOrigins: ["*"],
             },
         });
-        
-        bookCastsTable.grantReadData(getBookCastMembersFn);
-        
-        new cdk.CfnOutput(this, "Get Book Cast URL", {
+
+        // Output for book cast member URL
+        new cdk.CfnOutput(this, "GetBookCastURL", {
             value: getBookCastMembersURL.url,
         });
-        
 
-        // Seed data into DynamoDB table
+        // Seed data into DynamoDB tables
         new custom.AwsCustomResource(this, "booksddbInitData", {
             onCreate: {
                 service: "DynamoDB",
