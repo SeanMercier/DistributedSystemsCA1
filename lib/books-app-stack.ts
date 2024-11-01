@@ -77,6 +77,7 @@ export class BooksAppStack extends cdk.Stack {
             entry: `${__dirname}/../lambda/getBookCastMembers.ts`,
             environment: {
                 CAST_TABLE_NAME: bookCastsTable.tableName,
+                BOOKS_TABLE_NAME: booksTable.tableName,
                 REGION: "eu-west-1",
             },
         });
