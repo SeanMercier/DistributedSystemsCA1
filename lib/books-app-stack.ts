@@ -79,6 +79,30 @@ export class BooksAppStack extends cdk.Stack {
         });
         booksTable.grantReadWriteData(addBookFn);
 
+        // Lambda to delete book by id
+        const deleteBookFn = new lambdanode.NodejsFunction(this, "DeleteBookFn", {
+            architecture: lambda.Architecture.ARM_64,
+            runtime: lambda.Runtime.NODEJS_18_X,
+            entry: `${__dirname}/../lambda/deleteBook.ts`,
+            environment: {
+                TABLE_NAME: booksTable.tableName,
+                REGION: "eu-west-1",
+            },
+        });
+        booksTable.grantReadWriteData(deleteBookFn); // Grant permissions for the delete function
+
+        // Lambda to delete all books
+        const deleteAllBooksFn = new lambdanode.NodejsFunction(this, "DeleteAllBooksFn", {
+            architecture: lambda.Architecture.ARM_64,
+            runtime: lambda.Runtime.NODEJS_18_X,
+            entry: `${__dirname}/../lambda/deleteAllBooks.ts`,
+            environment: {
+                TABLE_NAME: booksTable.tableName,
+                REGION: "eu-west-1",
+            },
+        });
+        booksTable.grantReadWriteData(deleteAllBooksFn); // Grant permission to read and delete
+
         // Lambda to get book cast members
         const getBookCastMembersFn = new lambdanode.NodejsFunction(this, "GetBookCastMemberFn", {
             architecture: lambda.Architecture.ARM_64,
@@ -112,22 +136,12 @@ export class BooksAppStack extends cdk.Stack {
             }),
         });
 
-        const deleteBookFn = new lambdanode.NodejsFunction(this, "DeleteBookFn", {
-            architecture: lambda.Architecture.ARM_64,
-            runtime: lambda.Runtime.NODEJS_18_X,
-            entry: `${__dirname}/../lambda/deleteBook.ts`,
-            environment: {
-                TABLE_NAME: booksTable.tableName,
-                REGION: "eu-west-1",
-            },
-        });
-        booksTable.grantReadWriteData(deleteBookFn); // Grant permissions for the delete function
-
-
-
         const bookResource = booksResource.addResource("{id}");
         bookResource.addMethod("GET", new apigateway.LambdaIntegration(getBookByIdFn));
         bookResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteBookFn));
+
+        // Add DELETE method for all books
+        booksResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteAllBooksFn)); // Delete all books
 
         // Expose getBookCastMembersFn with a URL
         const getBookCastMembersURL = getBookCastMembersFn.addFunctionUrl({
