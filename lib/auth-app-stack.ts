@@ -96,6 +96,11 @@ export class AuthAppStack extends cdk.Stack {
         });
 
         publicRes.addMethod("GET", new apig.LambdaIntegration(publicFn));
+
+        new cdk.CfnOutput(this, 'UserPoolId', {
+          value: userPool.userPoolId,
+          exportName: 'UserPoolId', // Export name for cross-stack reference
+      });
     }
 
     private addAuthRoute(

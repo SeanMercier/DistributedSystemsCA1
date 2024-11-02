@@ -13,12 +13,9 @@ export class BooksAppStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
 
-        // Create a Cognito User Pool for authentication
-        const userPool = new cognito.UserPool(this, "UserPool", {
-            signInAliases: { email: true }, // allow sign in with email
-            selfSignUpEnabled: true,
-            removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev/test
-        });
+        // Import User Pool ID from Auth Stack
+        const userPoolId = cdk.Fn.importValue('UserPoolId');
+        const userPool = cognito.UserPool.fromUserPoolId(this, 'ImportedUserPool', userPoolId);
 
         // Create a DynamoDB table for storing books
         const booksTable = new dynamodb.Table(this, "BooksTable", {
