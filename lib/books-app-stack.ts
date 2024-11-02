@@ -151,7 +151,11 @@ export class BooksAppStack extends cdk.Stack {
         const bookResource = booksResource.addResource("{id}");
         bookResource.addMethod("GET", new apigateway.LambdaIntegration(getBookByIdFn));
         bookResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteBookFn));
-        bookResource.addMethod("PUT", new apigateway.LambdaIntegration(updateBookFn)); // Update method for books
+        bookResource.addMethod("PUT", new apigateway.LambdaIntegration(updateBookFn), {
+            authorizer: new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizerUpdate', {
+                cognitoUserPools: [userPool],
+            }),
+        }); // Update method for books
 
         // Add DELETE method for all books
         booksResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteAllBooksFn)); // Delete all books
