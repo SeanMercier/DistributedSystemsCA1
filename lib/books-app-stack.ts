@@ -15,6 +15,8 @@ export class BooksAppStack extends cdk.Stack {
 
         // Import User Pool ID from Auth Stack
         const userPoolId = cdk.Fn.importValue('UserPoolId');
+        
+        // Use the imported user pool
         const userPool = cognito.UserPool.fromUserPoolId(this, 'ImportedUserPool', userPoolId);
 
         // Create a DynamoDB table for storing books
@@ -40,124 +42,53 @@ export class BooksAppStack extends cdk.Stack {
             sortKey: { name: "roleName", type: dynamodb.AttributeType.STRING },
         });
 
-        // Lambda to get a single book by id
-        const getBookByIdFn = new lambdanode.NodejsFunction(this, "GetBookByIdFn", {
-            architecture: lambda.Architecture.ARM_64,
-            runtime: lambda.Runtime.NODEJS_18_X,
-            entry: `${__dirname}/../lambda/getBookById.ts`,
-            environment: {
-                TABLE_NAME: booksTable.tableName,
-                REGION: "eu-west-1",
-            },
-        });
-        booksTable.grantReadData(getBookByIdFn);
-
-        // Lambda to get all books
-        const getAllBooksFn = new lambdanode.NodejsFunction(this, "GetAllBooksFn", {
-            architecture: lambda.Architecture.ARM_64,
-            runtime: lambda.Runtime.NODEJS_18_X,
-            entry: `${__dirname}/../lambda/getAllBooks.ts`,
-            environment: {
-                TABLE_NAME: booksTable.tableName,
-                REGION: "eu-west-1",
-            },
-        });
-        booksTable.grantReadData(getAllBooksFn);
-
-        // Lambda to add a new book
-        const addBookFn = new lambdanode.NodejsFunction(this, "AddBookFn", {
-            architecture: lambda.Architecture.ARM_64,
-            runtime: lambda.Runtime.NODEJS_18_X,
-            entry: `${__dirname}/../lambda/addBook.ts`,
-            environment: {
-                TABLE_NAME: booksTable.tableName,
-                REGION: "eu-west-1",
-            },
-        });
-        booksTable.grantReadWriteData(addBookFn);
-
-        // Lambda to delete book by id
-        const deleteBookFn = new lambdanode.NodejsFunction(this, "DeleteBookFn", {
-            architecture: lambda.Architecture.ARM_64,
-            runtime: lambda.Runtime.NODEJS_18_X,
-            entry: `${__dirname}/../lambda/deleteBook.ts`,
-            environment: {
-                TABLE_NAME: booksTable.tableName,
-                REGION: "eu-west-1",
-            },
-        });
-        booksTable.grantReadWriteData(deleteBookFn); // Grant permissions for the delete function
-
-        // Lambda to delete all books
-        const deleteAllBooksFn = new lambdanode.NodejsFunction(this, "DeleteAllBooksFn", {
-            architecture: lambda.Architecture.ARM_64,
-            runtime: lambda.Runtime.NODEJS_18_X,
-            entry: `${__dirname}/../lambda/deleteAllBooks.ts`,
-            environment: {
-                TABLE_NAME: booksTable.tableName,
-                REGION: "eu-west-1",
-            },
-        });
-        booksTable.grantReadWriteData(deleteAllBooksFn); // Grant permission to read and delete
-
-        // Lambda to get book cast members
-        const getBookCastMembersFn = new lambdanode.NodejsFunction(this, "GetBookCastMemberFn", {
-            architecture: lambda.Architecture.ARM_64,
-            runtime: lambda.Runtime.NODEJS_18_X,
-            entry: `${__dirname}/../lambda/getBookCastMembers.ts`,
-            environment: {
-                CAST_TABLE_NAME: bookCastsTable.tableName,
-                BOOKS_TABLE_NAME: booksTable.tableName,
-                REGION: "eu-west-1",
-            },
-        });
-        bookCastsTable.grantReadData(getBookCastMembersFn);
-
-        // Lambda to update a book
-        const updateBookFn = new lambdanode.NodejsFunction(this, "UpdateBookFn", {
-            architecture: lambda.Architecture.ARM_64,
-            runtime: lambda.Runtime.NODEJS_18_X,
-            entry: `${__dirname}/../lambda/updateBook.ts`,
-            environment: {
-                TABLE_NAME: booksTable.tableName,
-                REGION: "eu-west-1",
-            },
-        });
-        booksTable.grantReadWriteData(updateBookFn);
-
+        // Lambda functions
+        const getAllBooksFn = this.createLambdaFunction("GetAllBooksFn", `${__dirname}/../lambda/getAllBooks.ts`, booksTable);
+        const addBookFn = this.createLambdaFunction("AddBookFn", `${__dirname}/../lambda/addBook.ts`, booksTable);
+        const deleteBookFn = this.createLambdaFunction("DeleteBookFn", `${__dirname}/../lambda/deleteBook.ts`, booksTable);
+        const deleteAllBooksFn = this.createLambdaFunction("DeleteAllBooksFn", `${__dirname}/../lambda/deleteAllBooks.ts`, booksTable);
+        const getBookByIdFn = this.createLambdaFunction("GetBookByIdFn", `${__dirname}/../lambda/getBookById.ts`, booksTable);
+        const updateBookFn = this.createLambdaFunction("UpdateBookFn", `${__dirname}/../lambda/updateBook.ts`, booksTable);
+        
         // API Gateway setup
         const api = new apigateway.RestApi(this, "BooksApi", {
             restApiName: "Books Service",
             description: "API for managing books in DynamoDB.",
             defaultCorsPreflightOptions: {
                 allowHeaders: ["Content-Type", "X-Amz-Date"],
-                allowMethods: ["OPTIONS", "GET", "POST"],
+                allowMethods: ["OPTIONS", "GET"],
                 allowOrigins: ["*"],
             },
         });
 
+        // Create Cognito User Pools Authorizer
+        const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
+            cognitoUserPools: [userPool],
+        });
+
         // API Gateway resources and methods
         const booksResource = api.root.addResource("books");
-        booksResource.addMethod("GET", new apigateway.LambdaIntegration(getAllBooksFn));
+        booksResource.addMethod("GET", new apigateway.LambdaIntegration(getAllBooksFn)); // Public access
         booksResource.addMethod("POST", new apigateway.LambdaIntegration(addBookFn), {
-            authorizer: new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
-                cognitoUserPools: [userPool],
-            }),
+            authorizer: cognitoAuthorizer, // Protected by Cognito
         });
 
         const bookResource = booksResource.addResource("{id}");
-        bookResource.addMethod("GET", new apigateway.LambdaIntegration(getBookByIdFn));
-        bookResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteBookFn));
+        bookResource.addMethod("GET", new apigateway.LambdaIntegration(getBookByIdFn)); // Public access
+        bookResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteBookFn), {
+            authorizer: cognitoAuthorizer, // Protected by Cognito
+        });
         bookResource.addMethod("PUT", new apigateway.LambdaIntegration(updateBookFn), {
-            authorizer: new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizerUpdate', {
-                cognitoUserPools: [userPool],
-            }),
-        }); // Update method for books
+            authorizer: cognitoAuthorizer, // Protected by Cognito
+        });
 
         // Add DELETE method for all books
-        booksResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteAllBooksFn)); // Delete all books
+        booksResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteAllBooksFn), {
+            authorizer: cognitoAuthorizer, // Protected by Cognito
+        }); // Delete all books
 
         // Expose getBookCastMembersFn with a URL
+        const getBookCastMembersFn = this.createLambdaFunction("GetBookCastMemberFn", `${__dirname}/../lambda/getBookCastMembers.ts`, bookCastsTable);
         const getBookCastMembersURL = getBookCastMembersFn.addFunctionUrl({
             authType: lambda.FunctionUrlAuthType.NONE,
             cors: {
@@ -187,5 +118,19 @@ export class BooksAppStack extends cdk.Stack {
                 resources: [booksTable.tableArn, bookCastsTable.tableArn],
             }),
         });
+    }
+
+    private createLambdaFunction(name: string, entry: string, table: dynamodb.Table): lambdanode.NodejsFunction {
+        const lambdaFn = new lambdanode.NodejsFunction(this, name, {
+            architecture: lambda.Architecture.ARM_64,
+            runtime: lambda.Runtime.NODEJS_18_X,
+            entry: entry,
+            environment: {
+                TABLE_NAME: table.tableName,
+                REGION: "eu-west-1",
+            },
+        });
+        table.grantReadWriteData(lambdaFn);
+        return lambdaFn;
     }
 }
