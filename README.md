@@ -48,7 +48,7 @@ The application utilizes the following AWS services:
 ```
 
 ## How to run the project
-1: install the necessary dependencies: npm install
-2: Deploy all stacks in the application: cdk deploy --all
-3: Enter 'y' when prompted until stacks are deployed
+- Install the necessary dependencies: npm install
+- Deploy all stacks in the application: cdk deploy --all
+- Enter 'y' when prompted until stacks are deployed
 
