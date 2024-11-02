@@ -45,6 +45,7 @@ The application utilizes the following AWS services:
     "description": "A cautionary tale about the dangers of totalitarianism.",
     "publicationDate": "1949-06-08"
 }
+```
 
 ## How to run the project
 1: install the necessary dependencies: npm install
