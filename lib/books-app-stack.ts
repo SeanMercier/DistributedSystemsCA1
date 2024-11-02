@@ -116,6 +116,18 @@ export class BooksAppStack extends cdk.Stack {
         });
         bookCastsTable.grantReadData(getBookCastMembersFn);
 
+        // Lambda to update a book
+        const updateBookFn = new lambdanode.NodejsFunction(this, "UpdateBookFn", {
+            architecture: lambda.Architecture.ARM_64,
+            runtime: lambda.Runtime.NODEJS_18_X,
+            entry: `${__dirname}/../lambda/updateBook.ts`,
+            environment: {
+                TABLE_NAME: booksTable.tableName,
+                REGION: "eu-west-1",
+            },
+        });
+        booksTable.grantReadWriteData(updateBookFn);
+
         // API Gateway setup
         const api = new apigateway.RestApi(this, "BooksApi", {
             restApiName: "Books Service",
@@ -139,6 +151,7 @@ export class BooksAppStack extends cdk.Stack {
         const bookResource = booksResource.addResource("{id}");
         bookResource.addMethod("GET", new apigateway.LambdaIntegration(getBookByIdFn));
         bookResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteBookFn));
+        bookResource.addMethod("PUT", new apigateway.LambdaIntegration(updateBookFn)); // Update method for books
 
         // Add DELETE method for all books
         booksResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteAllBooksFn)); // Delete all books
