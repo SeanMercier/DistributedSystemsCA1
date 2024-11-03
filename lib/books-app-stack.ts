@@ -8,6 +8,7 @@ import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { books, bookCasts } from "../seed/books";
 import { generateBatch } from "../shared/util";
 import * as cognito from "aws-cdk-lib/aws-cognito";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export class BooksAppStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -15,7 +16,7 @@ export class BooksAppStack extends cdk.Stack {
 
         // Import User Pool ID from Auth Stack
         const userPoolId = cdk.Fn.importValue('UserPoolId');
-        
+
         // Use the imported user pool
         const userPool = cognito.UserPool.fromUserPoolId(this, 'ImportedUserPool', userPoolId);
 
@@ -50,6 +51,15 @@ export class BooksAppStack extends cdk.Stack {
         const getBookByIdFn = this.createLambdaFunction("GetBookByIdFn", `${__dirname}/../lambda/getBookById.ts`, booksTable);
         const updateBookFn = this.createLambdaFunction("UpdateBookFn", `${__dirname}/../lambda/updateBook.ts`, booksTable);
         
+        // New translation Lambda function
+        const translateTextFn = this.createLambdaFunction("TranslateTextFn", `${__dirname}/../lambda/translateText.ts`, booksTable);
+
+        // Attach IAM Policy for TranslateText
+        translateTextFn.addToRolePolicy(new iam.PolicyStatement({
+            actions: ["translate:TranslateText"],
+            resources: ["*"],
+        }));
+
         // API Gateway setup
         const api = new apigateway.RestApi(this, "BooksApi", {
             restApiName: "Books Service",
@@ -86,6 +96,10 @@ export class BooksAppStack extends cdk.Stack {
         booksResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteAllBooksFn), {
             authorizer: cognitoAuthorizer, // Protected by Cognito
         }); // Delete all books
+
+        // New Translate endpoint
+        const translateResource = api.root.addResource("translate");
+        translateResource.addMethod("GET", new apigateway.LambdaIntegration(translateTextFn)); // Public access
 
         // Expose getBookCastMembersFn with a URL
         const getBookCastMembersFn = this.createLambdaFunction("GetBookCastMemberFn", `${__dirname}/../lambda/getBookCastMembers.ts`, bookCastsTable);
