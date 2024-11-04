@@ -28,9 +28,14 @@ The context chosen for the web API is a book management system. This API allows 
 - **GET /bookcasts?bookId={id}&authorName={name}** - Get cast members for a specific book filtered by author name.
 - **GET /bookcasts?bookId={id}&roleName={name}** - Get cast members for a specific book filtered by role name.
 
-## Update Constraint
+## Authentication API Endpoints
 
-### Update Constraint
+- **POST /signup** - Register a new user.
+- **POST /confirm-signup** - Confirm the registration of a new user with a verification code.
+- **POST /signin** - Sign in an existing user and obtain an authentication token.
+- **POST /signout** - Sign out the authenticated user and invalidate the authentication token. Successfully removes the authentication token from the client side by setting a cookie with an expired date.
+
+## Update Constraint
 
 There is no update constraint implemented in the application as I wasn't able to code it successfully despite many attempts. Any authenticated user can update any book regardless of who created it.
 
