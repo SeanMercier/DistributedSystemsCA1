@@ -2,7 +2,7 @@
 
 **Name:** Sean Mercier
 
-**Demo:** [YouTube Video Demonstration](insert_your_video_link_here)
+**Demo:** [YouTube Video Demonstration](https://youtu.be/vxM7pMofBow)
 
 ## Context
 
