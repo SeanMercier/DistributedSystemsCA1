@@ -1,54 +1,43 @@
-# Books API
+# Serverless REST Assignment - Distributed Systems
 
-## Overview
-This project demonstrates the implementation of a RESTful API for managing a collection of books using AWS services, including DynamoDB, AWS Lambda, and AWS Cognito for authentication.
+**Name:** Sean Mercier
 
-## Table of Contents
-- [Features](#features)
-- [Architecture](#architecture)
-- [API Endpoints](#api-endpoints)
-- [Authentication](#authentication)
-- [How to Run the Project](#how-to-run-the-project)
-- [License](#license)
+**Demo:** [YouTube Video Demonstration](insert_your_video_link_here)
 
-## Features
-- **Add Books**: Allows users to add new books to the collection.
-- **Get Books**: Retrieve all books or a specific book by ID.
-- **Update Books**: Update the details of a book by ID.
-- **Delete Books**: Delete a specific book or delete all books.
-- **Authentication**: Secure POST and PUT requests using AWS Cognito.
+## Context
 
-## Architecture
-The application utilizes the following AWS services:
-- **Amazon Cognito**: For user authentication.
-- **Amazon DynamoDB**: For storing book information and book casts.
-- **AWS Lambda**: For serverless functions that handle API requests.
-- **Amazon API Gateway**: To expose the Lambda functions as a RESTful API.
+The context chosen for the web API is a book management system. This API allows users to manage a collection of books, including their details and associated cast members. The main database table, "Books," stores the following attributes:
 
-## API Endpoints
-| Method | Endpoint                                       | Description                       |
-|--------|-----------------------------------------------|-----------------------------------|
-| GET    | `/books`                                     | Retrieve all books               |
-| GET    | `/books/{id}`                                | Retrieve a book by ID            |
-| POST   | `/books`                                     | Add a new book                   |
-| PUT    | `/books/{id}`                                | Update a book by ID              |
-| DELETE | `/books/{id}`                                | Delete a specific book           |
-| DELETE | `/books`                                     | Delete all books                 |
+- **id:** Unique identifier for each book (number).
+- **title:** Title of the book (string).
+- **author:** Author of the book (string).
+- **description:** Brief description of the book (string).
+- **publicationDate:** Date when the book was published (string).
+- **genre:** Genre of the book (string).
 
-### Sample Request Body for Adding/Updating a Book
-```json
-{
-    "id": 2,
-    "title": "1984",
-    "author": "George Orwell",
-    "genre": "Dystopian",
-    "description": "A cautionary tale about the dangers of totalitarianism.",
-    "publicationDate": "1949-06-08"
-}
-```
+## App API Endpoints
 
-## How to run the project
-- Install the necessary dependencies: npm install
-- Deploy all stacks in the application: cdk deploy --all
-- Enter 'y' when prompted until stacks are deployed
+- **GET /books** - Retrieve all books.
+- **POST /books** - Add a new book.
+- **GET /books/{id}** - Get details of a specific book by its ID.
+- **PUT /books/{id}** - Update an existing book by its ID.
+- **DELETE /books/{id}** - Delete a specific book by its ID.
+- **DELETE /books** - Delete all books.
+- **GET /translate** - Translate the description of a book based on its ID and target language.
+- **GET /bookcasts?bookId={id}** - Get all cast members associated with a specific book by its ID.
+- **GET /bookcasts?bookId={id}&authorName={name}** - Get cast members for a specific book filtered by author name.
+- **GET /bookcasts?bookId={id}&roleName={name}** - Get cast members for a specific book filtered by role name.
 
+## Update Constraint
+
+### Update Constraint
+
+There is no update constraint implemented in the application as I wasn't able to code it successfully despite many attempts. Any authenticated user can update any book regardless of who created it.
+
+## Translation Persistence
+
+To avoid repeat requests to Amazon Translate, the system persists translations in a separate DynamoDB table. Each time a translation is requested, the API first checks if the requested translation already exists in the database. If it does, the stored translation is returned, bypassing the need to call Amazon Translate, thus reducing costs and improving response times.
+
+## Extra
+
+This assignment utilizes a multi-stack solution to organize different components of the application effectively.
