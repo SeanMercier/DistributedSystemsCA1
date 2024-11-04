@@ -8,13 +8,15 @@ import {
 
 const ddbDocClient = createDocumentClient();
 
-export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
+export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   try {
     console.log("Event: ", JSON.stringify(event));
+    console.log("CAST_TABLE_NAME:", process.env.CAST_TABLE_NAME); // Log the table name for debugging
+    
     const queryParams = event.queryStringParameters;
     if (!queryParams) {
       return {
-        statusCode: 500,
+        statusCode: 400,
         headers: {
           "content-type": "application/json",
         },
@@ -24,11 +26,11 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
     if (!queryParams.bookId) {
       return {
-        statusCode: 500,
+        statusCode: 400,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: "Missing book Id parameter" }),
+        body: JSON.stringify({ message: "Missing book ID parameter" }),
       };
     }
 
@@ -78,13 +80,13 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
       }),
     };
   } catch (error: any) {
-    console.log(JSON.stringify(error));
+    console.log("Error:", JSON.stringify(error)); // Improved error logging
     return {
       statusCode: 500,
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ error }),
+      body: JSON.stringify({ error: error.message }), // Simplified error response
     };
   }
 };

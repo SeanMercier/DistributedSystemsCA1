@@ -60,6 +60,11 @@ export class BooksAppStack extends cdk.Stack {
             resources: ["*"],
         }));
 
+        // New Lambda function for getting book cast members
+        const getBookCastMembersFn = this.createLambdaFunction("GetBookCastMemberFn", `${__dirname}/../lambda/getBookCastMembers.ts`, bookCastsTable);
+        getBookCastMembersFn.addEnvironment("CAST_TABLE_NAME", bookCastsTable.tableName);
+
+
         // API Gateway setup
         const api = new apigateway.RestApi(this, "BooksApi", {
             restApiName: "Books Service",
@@ -101,19 +106,9 @@ export class BooksAppStack extends cdk.Stack {
         const translateResource = api.root.addResource("translate");
         translateResource.addMethod("GET", new apigateway.LambdaIntegration(translateTextFn)); // Public access
 
-        // Expose getBookCastMembersFn with a URL
-        const getBookCastMembersFn = this.createLambdaFunction("GetBookCastMemberFn", `${__dirname}/../lambda/getBookCastMembers.ts`, bookCastsTable);
-        const getBookCastMembersURL = getBookCastMembersFn.addFunctionUrl({
-            authType: lambda.FunctionUrlAuthType.NONE,
-            cors: {
-                allowedOrigins: ["*"],
-            },
-        });
-
-        // Output for book cast member URL
-        new cdk.CfnOutput(this, "GetBookCastURL", {
-            value: getBookCastMembersURL.url,
-        });
+        // Add Bookcast endpoint
+        const bookCastsResource = api.root.addResource("bookcasts");
+        bookCastsResource.addMethod("GET", new apigateway.LambdaIntegration(getBookCastMembersFn)); // Public access
 
         // Seed data into DynamoDB tables
         new custom.AwsCustomResource(this, "booksddbInitData", {
