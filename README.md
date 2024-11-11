@@ -46,3 +46,12 @@ To avoid repeat requests to Amazon Translate, the system persists translations i
 ## Extra
 
 This assignment utilizes a multi-stack solution to organize different components of the application effectively.
+
+## References
+
+- [AWS Lambda and API Gateway Integration](https://docs.aws.amazon.com/apigateway/latest/developerguide/lambda-integration.html) - Used for integrating AWS Lambda functions with API Gateway for routing HTTP requests.
+- [AWS Lambda Documentation](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html) - Used for creating, testing, and deploying Lambda functions that interact with other AWS services such as DynamoDB and API Gateway.
+- [AWS SDK for JavaScript](https://aws.amazon.com/sdk-for-javascript/) - Used for interacting with AWS services like Cognito, DynamoDB, and Amazon Translate within Lambda functions.
+- [AWS Cognito Documentation](https://docs.aws.amazon.com/cognitoidentityprovider/latest/developerguide/Welcome.html) - Used for authentication and user management, handling sign-up, sign-in, and sign-out processes, as well as integrating with API Gateway for protected routes.
+- [AWS DynamoDB Documentation](https://docs.aws.amazon.com/dynamodb/latest/developerguide/Welcome.html) - Referenced for the setup and interaction with DynamoDB, used for storing books, cast members, and translations.
+- [Ensuring Data Integrity: JSON Schema Validation in Node.js with AJV](https://dev.to/franciscomendes10866/json-schema-validation-in-nodejs-using-ajv-53jd) - Offered insights into implementing JSON schema validation in Node.js applications using AJV, enhancing data validation practices.
